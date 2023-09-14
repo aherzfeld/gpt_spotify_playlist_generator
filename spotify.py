@@ -2,34 +2,17 @@ import openai
 from dotenv import dotenv_values
 import json
 import spotipy
-
+import argparse
 
 config = dotenv_values('.env')
 openai.api_key = config['OPENAI_API_KEY']
 
-sp = spotipy.Spotify(
-    auth_manager=spotipy.SpotifyOAuth(
-        client_id=config['SPOTIFY_CLIENT_ID'],
-        client_secret=config['SPOTIFY_CLIENT_SECRET'],
-        redirect_uri="http://localhost:9999",
-        scope='playlist-modify-private'
-    )
-)
+parser = argparse.ArgumentParser(description='Simple command line song utility')
+parser.add_argument('-p', type=str, help='The prompt to describe the playlist')
+parser.add_argument('-n', type=str, default=8, help='The number of songs to add to the playlist')
 
-current_user = sp.current_user()
 
-assert current_user is not None
-
-search_results = sp.search(q='Uptown Funk', type='track', limit=10)
-tracks = [search_results['tracks']['items'][0]['id']]
-
-created_playlist = sp.user_playlist_create(
-    current_user['id'],
-    public=False,
-    name='test playlist yay'
-)
-
-sp.user_playlist_add_tracks(current_user['id'], created_playlist['id'], tracks)
+args = parser.parse_args()
 
 
 def get_playlist(prompt, count=8):
@@ -61,6 +44,39 @@ def get_playlist(prompt, count=8):
     )
 
     playlist = json.loads((response['choices'][0]['message']['content']))
-    print(playlist)
+    return playlist
 
-# get_playlist('folksy fun music', 3)
+playlist = get_playlist(args.p, args.n)
+print(playlist)
+
+sp = spotipy.Spotify(
+    auth_manager=spotipy.SpotifyOAuth(
+        client_id=config['SPOTIFY_CLIENT_ID'],
+        client_secret=config['SPOTIFY_CLIENT_SECRET'],
+        redirect_uri="http://localhost:9999",
+        scope='playlist-modify-private'
+    )
+)
+
+current_user = sp.current_user()
+
+track_ids = []
+assert current_user is not None
+
+for item in playlist:
+    artist, song = item['artist'], item['song']
+    query = f'{song} {artist}'
+    search_results = sp.search(q=query, type='track', limit=10)
+    track_ids.append(search_results['tracks']['items'][0]['id'])
+
+created_playlist = sp.user_playlist_create(
+    current_user['id'],
+    public=False,
+    name='test playlist yay'
+)
+
+sp.user_playlist_add_tracks(current_user['id'], created_playlist['id'], track_ids)
+
+
+
+
