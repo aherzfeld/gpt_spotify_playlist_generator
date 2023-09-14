@@ -8,7 +8,7 @@ config = dotenv_values('.env')
 openai.api_key = config['OPENAI_API_KEY']
 
 parser = argparse.ArgumentParser(description='Simple command line song utility')
-parser.add_argument('-p', type=str, help='The prompt to describe the playlist')
+parser.add_argument('-p', type=str, default='AI playlist', help='The prompt to describe the playlist')
 parser.add_argument('-n', type=str, default=8, help='The number of songs to add to the playlist')
 
 
@@ -72,7 +72,7 @@ for item in playlist:
 created_playlist = sp.user_playlist_create(
     current_user['id'],
     public=False,
-    name='test playlist yay'
+    name=args.p
 )
 
 sp.user_playlist_add_tracks(current_user['id'], created_playlist['id'], track_ids)
